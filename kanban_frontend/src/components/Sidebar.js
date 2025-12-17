@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppState, useAppDispatch, ActionTypes, boardActions } from '../state/store';
+import EmojiPicker from './EmojiPicker';
 import './Sidebar.css';
 
 // PUBLIC_INTERFACE
@@ -16,6 +17,11 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
   const dispatch = useAppDispatch();
   const [isCreatingBoard, setIsCreatingBoard] = useState(false);
   const [newBoardTitle, setNewBoardTitle] = useState('');
+  const [emojiPickerState, setEmojiPickerState] = useState({
+    isOpen: false,
+    boardId: null,
+    anchorEl: null
+  });
 
   const handleCreateBoard = async (e) => {
     e.preventDefault();
@@ -60,6 +66,41 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
     }
   };
 
+  const handleEmojiClick = (boardId, e) => {
+    e.stopPropagation();
+    setEmojiPickerState({
+      isOpen: true,
+      boardId: boardId,
+      anchorEl: e.currentTarget
+    });
+  };
+
+  const handleEmojiSelect = async (emoji) => {
+    if (emojiPickerState.boardId) {
+      try {
+        await boardActions.updateBoardEmoji(emojiPickerState.boardId, emoji);
+        dispatch({ 
+          type: ActionTypes.UPDATE_BOARD_EMOJI, 
+          payload: { 
+            id: emojiPickerState.boardId, 
+            emoji: emoji 
+          } 
+        });
+      } catch (error) {
+        console.error('Error updating board emoji:', error);
+        dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
+      }
+    }
+  };
+
+  const closeEmojiPicker = () => {
+    setEmojiPickerState({
+      isOpen: false,
+      boardId: null,
+      anchorEl: null
+    });
+  };
+
   return (
     <aside className={`app-sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
@@ -83,9 +124,14 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
               onClick={() => handleBoardClick(board.id)}
               title={board.title}
             >
-              <span className="board-icon">
-                {board.starred ? '⭐' : '📋'}
-              </span>
+              <button
+                className="board-icon board-emoji-btn"
+                onClick={(e) => handleEmojiClick(board.id, e)}
+                aria-label={`Change emoji for ${board.title}`}
+                title="Click to change emoji"
+              >
+                {board.emoji || '📋'}
+              </button>
               {!collapsed && (
                 <>
                   <span className="board-title">{board.title}</span>
@@ -145,6 +191,17 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
           </>
         )}
       </div>
+
+      {emojiPickerState.isOpen && (
+        <EmojiPicker
+          currentEmoji={
+            state.boards.find(b => b.id === emojiPickerState.boardId)?.emoji || '📋'
+          }
+          onEmojiSelect={handleEmojiSelect}
+          onClose={closeEmojiPicker}
+          anchorEl={emojiPickerState.anchorEl}
+        />
+      )}
     </aside>
   );
 };

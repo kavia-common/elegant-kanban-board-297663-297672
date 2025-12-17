@@ -20,6 +20,7 @@ export const ActionTypes = {
   SET_BOARDS: 'SET_BOARDS',
   ADD_BOARD: 'ADD_BOARD',
   UPDATE_BOARD: 'UPDATE_BOARD',
+  UPDATE_BOARD_EMOJI: 'UPDATE_BOARD_EMOJI',
   DELETE_BOARD: 'DELETE_BOARD',
   SET_ACTIVE_BOARD: 'SET_ACTIVE_BOARD',
   
@@ -55,6 +56,14 @@ const appReducer = (state, action) => {
         ...state,
         boards: state.boards.map(b =>
           b.id === action.payload.id ? { ...b, ...action.payload } : b
+        )
+      };
+    
+    case ActionTypes.UPDATE_BOARD_EMOJI:
+      return {
+        ...state,
+        boards: state.boards.map(b =>
+          b.id === action.payload.id ? { ...b, emoji: action.payload.emoji, updatedAt: Date.now() } : b
         )
       };
     

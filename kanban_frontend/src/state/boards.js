@@ -7,6 +7,7 @@ import { saveToIndexedDB, deleteFromIndexedDB, loadAllFromIndexedDB } from '../u
  * @property {string} id - Unique board identifier
  * @property {string} title - Board title
  * @property {string} description - Board description
+ * @property {string} emoji - Board emoji icon
  * @property {string[]} columnOrder - Ordered array of column IDs
  * @property {boolean} starred - Quick access flag
  * @property {string} backgroundColor - Board background color
@@ -34,6 +35,7 @@ export const createBoard = async (boardData) => {
     id: generateId(),
     title: boardData.title || 'Untitled Board',
     description: boardData.description || '',
+    emoji: boardData.emoji || '📋',
     columnOrder: [],
     starred: false,
     backgroundColor: '#ffffff',
@@ -57,6 +59,32 @@ export const updateBoard = async (boardId, updates) => {
     ...updates, 
     id: boardId, 
     updatedAt: Date.now() 
+  };
+  
+  await saveToIndexedDB('boards', updatedBoard);
+  return updatedBoard;
+};
+
+// PUBLIC_INTERFACE
+/**
+ * Update a board's emoji
+ * @param {string} boardId - Board ID to update
+ * @param {string} emoji - New emoji
+ * @returns {Promise<Board>} Updated board object
+ */
+export const updateBoardEmoji = async (boardId, emoji) => {
+  // Load current board data
+  const boards = await loadAllFromIndexedDB('boards');
+  const currentBoard = boards.find(b => b.id === boardId);
+  
+  if (!currentBoard) {
+    throw new Error('Board not found');
+  }
+  
+  const updatedBoard = {
+    ...currentBoard,
+    emoji: emoji,
+    updatedAt: Date.now()
   };
   
   await saveToIndexedDB('boards', updatedBoard);
