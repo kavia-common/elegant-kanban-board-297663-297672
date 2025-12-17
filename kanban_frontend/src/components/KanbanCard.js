@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { Draggable } from 'react-beautiful-dnd';
+import HighlightText from './HighlightText';
 import './KanbanCard.css';
 
 // PUBLIC_INTERFACE
 /**
- * KanbanCard component for displaying individual cards
+ * KanbanCard component for displaying individual cards with search highlighting
  * @param {Object} props - Component props
  * @param {Object} props.card - Card data object
  * @param {number} props.index - Card index in the column
  * @param {Function} props.onEdit - Edit card handler
  * @param {Function} props.onDelete - Delete card handler
+ * @param {string} props.searchQuery - Current search query for highlighting
+ * @param {boolean} props.isSearchActive - Whether search is currently active
  */
-const KanbanCard = ({ card, index, onEdit, onDelete }) => {
+const KanbanCard = ({ card, index, onEdit, onDelete, searchQuery = '', isSearchActive = false }) => {
   const [showActions, setShowActions] = useState(false);
 
   const handleEdit = (e) => {
@@ -38,7 +41,13 @@ const KanbanCard = ({ card, index, onEdit, onDelete }) => {
           onMouseLeave={() => setShowActions(false)}
         >
           <div className="card-header">
-            <h4 className="card-title">{card.title}</h4>
+            <h4 className="card-title">
+              {isSearchActive ? (
+                <HighlightText text={card.title} query={searchQuery} />
+              ) : (
+                card.title
+              )}
+            </h4>
             {showActions && (
               <div className="card-actions">
                 <button
@@ -61,7 +70,13 @@ const KanbanCard = ({ card, index, onEdit, onDelete }) => {
             )}
           </div>
           {card.description && (
-            <p className="card-description">{card.description}</p>
+            <p className="card-description">
+              {isSearchActive ? (
+                <HighlightText text={card.description} query={searchQuery} />
+              ) : (
+                card.description
+              )}
+            </p>
           )}
           {card.priority && (
             <div className={`card-priority priority-${card.priority}`}>

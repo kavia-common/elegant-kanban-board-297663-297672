@@ -10,6 +10,7 @@ const initialState = {
   columns: [],
   cards: [],
   activeBoard: null,
+  searchQuery: '',
   loading: false,
   error: null
 };
@@ -36,6 +37,10 @@ export const ActionTypes = {
   UPDATE_CARD: 'UPDATE_CARD',
   DELETE_CARD: 'DELETE_CARD',
   MOVE_CARD: 'MOVE_CARD',
+  
+  // Search actions
+  SET_SEARCH_QUERY: 'SET_SEARCH_QUERY',
+  CLEAR_SEARCH_QUERY: 'CLEAR_SEARCH_QUERY',
   
   // UI state
   SET_LOADING: 'SET_LOADING',
@@ -124,6 +129,12 @@ const appReducer = (state, action) => {
           c.id === action.payload.id ? { ...c, ...action.payload } : c
         )
       };
+    
+    case ActionTypes.SET_SEARCH_QUERY:
+      return { ...state, searchQuery: action.payload };
+    
+    case ActionTypes.CLEAR_SEARCH_QUERY:
+      return { ...state, searchQuery: '' };
     
     case ActionTypes.SET_LOADING:
       return { ...state, loading: action.payload };

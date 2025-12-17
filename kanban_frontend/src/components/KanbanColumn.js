@@ -14,6 +14,8 @@ import './KanbanColumn.css';
  * @param {Function} props.onDeleteCard - Delete card handler
  * @param {Function} props.onEditColumn - Edit column handler
  * @param {Function} props.onDeleteColumn - Delete column handler
+ * @param {string} props.searchQuery - Current search query for highlighting
+ * @param {boolean} props.isSearchActive - Whether search is currently active
  */
 const KanbanColumn = ({ 
   column, 
@@ -22,7 +24,9 @@ const KanbanColumn = ({
   onEditCard, 
   onDeleteCard,
   onEditColumn,
-  onDeleteColumn
+  onDeleteColumn,
+  searchQuery = '',
+  isSearchActive = false
 }) => {
   const [newCardTitle, setNewCardTitle] = useState('');
   const [isAddingCard, setIsAddingCard] = useState(false);
@@ -90,6 +94,8 @@ const KanbanColumn = ({
                 index={index}
                 onEdit={onEditCard}
                 onDelete={onDeleteCard}
+                searchQuery={searchQuery}
+                isSearchActive={isSearchActive}
               />
             ))}
             {provided.placeholder}

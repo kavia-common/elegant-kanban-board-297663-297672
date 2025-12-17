@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DragDropContext } from 'react-beautiful-dnd';
 import { useAppState, useAppDispatch, ActionTypes, boardActions, columnActions, cardActions } from '../state/store';
+import useDebounce from '../hooks/useDebounce';
 import KanbanColumn from '../components/KanbanColumn';
 import './BoardPage.css';
 
 // PUBLIC_INTERFACE
 /**
- * BoardPage component for displaying Kanban board view
+ * BoardPage component for displaying Kanban board view with search functionality
  */
 const BoardPage = () => {
   const { id: boardIdFromUrl } = useParams();
@@ -22,6 +23,49 @@ const BoardPage = () => {
   const activeBoardId = boardIdFromUrl || state.activeBoard;
   const activeBoard = state.boards.find(b => b.id === activeBoardId);
   const boardColumns = state.columns.filter(c => c.boardId === activeBoardId);
+
+  // Debounce search query
+  const debouncedSearchQuery = useDebounce(state.searchQuery, 300);
+
+  // Filter cards and columns based on search query
+  const { filteredColumns, totalMatches } = useMemo(() => {
+    if (!debouncedSearchQuery || debouncedSearchQuery.length < 2) {
+      return {
+        filteredColumns: boardColumns,
+        totalMatches: 0
+      };
+    }
+
+    const query = debouncedSearchQuery.toLowerCase();
+    let matchCount = 0;
+    
+    const filtered = boardColumns.map(column => {
+      const columnCards = state.cards
+        .filter(c => c.columnId === column.id)
+        .sort((a, b) => a.position - b.position);
+
+      const matchingCards = columnCards.filter(card => {
+        const titleMatch = card.title?.toLowerCase().includes(query);
+        const descMatch = card.description?.toLowerCase().includes(query);
+        if (titleMatch || descMatch) {
+          matchCount++;
+          return true;
+        }
+        return false;
+      });
+
+      return {
+        ...column,
+        cards: matchingCards,
+        hasMatches: matchingCards.length > 0
+      };
+    }).filter(col => col.hasMatches);
+
+    return {
+      filteredColumns: filtered,
+      totalMatches: matchCount
+    };
+  }, [boardColumns, state.cards, debouncedSearchQuery]);
 
   // Load columns and cards when board changes
   useEffect(() => {
@@ -277,6 +321,14 @@ const BoardPage = () => {
     );
   }
 
+  // Determine which columns to show
+  const columnsToDisplay = debouncedSearchQuery && debouncedSearchQuery.length >= 2
+    ? filteredColumns
+    : boardColumns;
+
+  const isSearchActive = debouncedSearchQuery && debouncedSearchQuery.length >= 2;
+  const hasNoResults = isSearchActive && totalMatches === 0;
+
   return (
     <div className="board-page">
       <div className="board-header">
@@ -284,72 +336,109 @@ const BoardPage = () => {
         {activeBoard.description && (
           <p className="board-description">{activeBoard.description}</p>
         )}
-      </div>
-
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="board-columns">
-          {boardColumns
-            .sort((a, b) => a.position - b.position)
-            .map(column => {
-              const columnCards = state.cards
-                .filter(c => c.columnId === column.id)
-                .sort((a, b) => a.position - b.position);
-
-              return (
-                <KanbanColumn
-                  key={column.id}
-                  column={column}
-                  cards={columnCards}
-                  onAddCard={handleAddCard}
-                  onEditCard={handleEditCard}
-                  onDeleteCard={handleDeleteCard}
-                  onEditColumn={handleEditColumn}
-                  onDeleteColumn={handleDeleteColumn}
-                />
-              );
-            })}
-
-          <div className="add-column-container">
-            {isAddingColumn ? (
-              <form onSubmit={handleAddColumn} className="add-column-form">
-                <input
-                  type="text"
-                  className="add-column-input"
-                  placeholder="Enter column title..."
-                  value={newColumnTitle}
-                  onChange={(e) => setNewColumnTitle(e.target.value)}
-                  onBlur={() => {
-                    if (!newColumnTitle.trim()) setIsAddingColumn(false);
-                  }}
-                  autoFocus
-                />
-                <div className="add-column-actions">
-                  <button type="submit" className="btn-add-column">
-                    Add Column
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-cancel-column"
-                    onClick={() => {
-                      setNewColumnTitle('');
-                      setIsAddingColumn(false);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
+        
+        {/* Search result count with accessibility */}
+        {isSearchActive && (
+          <div 
+            className="search-results-info" 
+            role="status" 
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {totalMatches > 0 ? (
+              <span className="result-count">
+                {totalMatches} {totalMatches === 1 ? 'match' : 'matches'} found
+              </span>
             ) : (
-              <button
-                className="add-column-btn"
-                onClick={() => setIsAddingColumn(true)}
-              >
-                + Add Column
-              </button>
+              <span className="result-count no-results">No matches found</span>
             )}
           </div>
+        )}
+      </div>
+
+      {hasNoResults ? (
+        <div className="board-empty-search">
+          <div className="empty-state">
+            <div className="empty-state-icon">🔍</div>
+            <h2 className="empty-state-title">No Results Found</h2>
+            <p className="empty-state-description">
+              No cards match your search for "<strong>{debouncedSearchQuery}</strong>".
+              Try a different search term.
+            </p>
+          </div>
         </div>
-      </DragDropContext>
+      ) : (
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="board-columns">
+            {columnsToDisplay
+              .sort((a, b) => a.position - b.position)
+              .map(column => {
+                const columnCards = isSearchActive
+                  ? column.cards || []
+                  : state.cards
+                      .filter(c => c.columnId === column.id)
+                      .sort((a, b) => a.position - b.position);
+
+                return (
+                  <KanbanColumn
+                    key={column.id}
+                    column={column}
+                    cards={columnCards}
+                    onAddCard={handleAddCard}
+                    onEditCard={handleEditCard}
+                    onDeleteCard={handleDeleteCard}
+                    onEditColumn={handleEditColumn}
+                    onDeleteColumn={handleDeleteColumn}
+                    searchQuery={isSearchActive ? debouncedSearchQuery : ''}
+                    isSearchActive={isSearchActive}
+                  />
+                );
+              })}
+
+            {!isSearchActive && (
+              <div className="add-column-container">
+                {isAddingColumn ? (
+                  <form onSubmit={handleAddColumn} className="add-column-form">
+                    <input
+                      type="text"
+                      className="add-column-input"
+                      placeholder="Enter column title..."
+                      value={newColumnTitle}
+                      onChange={(e) => setNewColumnTitle(e.target.value)}
+                      onBlur={() => {
+                        if (!newColumnTitle.trim()) setIsAddingColumn(false);
+                      }}
+                      autoFocus
+                    />
+                    <div className="add-column-actions">
+                      <button type="submit" className="btn-add-column">
+                        Add Column
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-cancel-column"
+                        onClick={() => {
+                          setNewColumnTitle('');
+                          setIsAddingColumn(false);
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <button
+                    className="add-column-btn"
+                    onClick={() => setIsAddingColumn(true)}
+                  >
+                    + Add Column
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </DragDropContext>
+      )}
 
       {state.error && (
         <div className="error-toast">

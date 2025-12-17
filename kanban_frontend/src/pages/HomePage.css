@@ -70,6 +70,25 @@
   color: var(--color-text-primary);
 }
 
+/* Search results info */
+.search-results-info {
+  margin-bottom: var(--spacing-16);
+  padding: var(--spacing-8) var(--spacing-16);
+  background: rgba(37, 99, 235, 0.1);
+  border-radius: var(--radius-md);
+  display: inline-block;
+}
+
+.result-count {
+  font-size: var(--font-size-sm);
+  color: #2563EB;
+  font-weight: 500;
+}
+
+.result-count.no-results {
+  color: #EF4444;
+}
+
 .boards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

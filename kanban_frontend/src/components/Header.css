@@ -41,9 +41,16 @@
   letter-spacing: -0.02em;
 }
 
+/* Search container with clear button */
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
 .search-input {
   width: 100%;
   padding: var(--spacing-8) var(--spacing-16);
+  padding-right: 40px; /* Space for clear button */
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.15);
@@ -60,7 +67,50 @@
 .search-input:focus {
   outline: none;
   background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: #2563EB; /* Ocean Professional primary color */
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+}
+
+/* Clear button inside search input */
+.search-clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-clear-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.search-clear-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Screen reader only text */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
 .theme-toggle-btn {

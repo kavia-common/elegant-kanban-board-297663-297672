@@ -1,0 +1,30 @@
+.highlight-match {
+  background-color: rgba(245, 158, 11, 0.1); /* #F59E0B with 10% opacity */
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 2px;
+  font-weight: 500;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Dark mode support */
+:root[data-theme='dark'] .highlight-match {
+  background-color: rgba(245, 158, 11, 0.2);
+}
+
+/* Ensure good contrast and readability */
+.highlight-match {
+  transition: background-color 0.2s ease;
+}
+
+/* Subtle hover effect on highlighted text */
+.kanban-card:hover .highlight-match,
+.board-card:hover .highlight-match {
+  background-color: rgba(245, 158, 11, 0.15);
+}
+
+:root[data-theme='dark'] .kanban-card:hover .highlight-match,
+:root[data-theme='dark'] .board-card:hover .highlight-match {
+  background-color: rgba(245, 158, 11, 0.25);
+}
