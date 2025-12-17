@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppStateProvider } from './state/store';
 import { useTheme } from './hooks/useTheme';
 import AppLayout from './components/AppLayout';
@@ -13,11 +14,16 @@ function App() {
   const { theme, toggleTheme, isDark } = useTheme();
 
   return (
-    <AppStateProvider>
-      <AppLayout onThemeToggle={toggleTheme} isDark={isDark}>
-        <BoardPage />
-      </AppLayout>
-    </AppStateProvider>
+    <BrowserRouter>
+      <AppStateProvider>
+        <AppLayout onThemeToggle={toggleTheme} isDark={isDark}>
+          <Routes>
+            <Route path="/" element={<BoardPage />} />
+            <Route path="/board/:id" element={<BoardPage />} />
+          </Routes>
+        </AppLayout>
+      </AppStateProvider>
+    </BrowserRouter>
   );
 }
 
