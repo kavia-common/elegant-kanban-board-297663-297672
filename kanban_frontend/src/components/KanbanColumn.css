@@ -84,13 +84,14 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--spacing-4) 0;
-  min-height: 100px;
+  padding: var(--spacing-8);
+  min-height: 200px;
   transition: background-color var(--transition-fast);
 }
 
 .column-content.dragging-over {
-  background: rgba(37, 99, 235, 0.05);
+  background: rgba(37, 99, 235, 0.08);
+  border: 2px dashed rgba(37, 99, 235, 0.3);
   border-radius: var(--radius-md);
 }
 

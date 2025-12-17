@@ -169,49 +169,83 @@ const BoardPage = () => {
       const destColumnId = destination.droppableId;
 
       try {
-        // Move card within the same column or to a different column
-        const card = state.cards.find(c => c.id === draggableId);
-        
         if (sourceColumnId === destColumnId) {
           // Reorder within same column
           const columnCards = state.cards
             .filter(c => c.columnId === sourceColumnId)
             .sort((a, b) => a.position - b.position);
           
+          // Remove card from source position
           const [movedCard] = columnCards.splice(source.index, 1);
+          // Insert at destination position
           columnCards.splice(destination.index, 0, movedCard);
           
-          // Update positions
-          for (let i = 0; i < columnCards.length; i++) {
-            const updatedCard = await cardActions.updateCard(columnCards[i].id, {
-              ...columnCards[i],
-              position: i
-            });
+          // Batch update all card positions
+          const updatePromises = columnCards.map((card, index) => 
+            cardActions.updateCard(card.id, {
+              ...card,
+              position: index
+            })
+          );
+          
+          const updatedCards = await Promise.all(updatePromises);
+          
+          // Batch dispatch all updates
+          updatedCards.forEach(updatedCard => {
             dispatch({ type: ActionTypes.UPDATE_CARD, payload: updatedCard });
-          }
+          });
         } else {
           // Move to different column
-          const updatedCard = await cardActions.moveCard(
-            draggableId,
-            destColumnId,
-            destination.index
-          );
-          dispatch({ type: ActionTypes.MOVE_CARD, payload: updatedCard });
-          
-          // Reorder cards in destination column
-          const destCards = state.cards
-            .filter(c => c.columnId === destColumnId && c.id !== draggableId)
+          const sourceCards = state.cards
+            .filter(c => c.columnId === sourceColumnId)
             .sort((a, b) => a.position - b.position);
           
-          destCards.splice(destination.index, 0, updatedCard);
+          const destCards = state.cards
+            .filter(c => c.columnId === destColumnId)
+            .sort((a, b) => a.position - b.position);
           
-          for (let i = 0; i < destCards.length; i++) {
-            const updated = await cardActions.updateCard(destCards[i].id, {
-              ...destCards[i],
-              position: i
-            });
-            dispatch({ type: ActionTypes.UPDATE_CARD, payload: updated });
-          }
+          // Find and update the moved card
+          const movedCard = sourceCards.find(c => c.id === draggableId);
+          const updatedMovedCard = {
+            ...movedCard,
+            columnId: destColumnId,
+            position: destination.index
+          };
+          
+          // Remove from source
+          const newSourceCards = sourceCards.filter(c => c.id !== draggableId);
+          
+          // Insert into destination
+          const newDestCards = [...destCards];
+          newDestCards.splice(destination.index, 0, updatedMovedCard);
+          
+          // Prepare all updates
+          const updates = [];
+          
+          // Update moved card
+          updates.push(cardActions.updateCard(draggableId, updatedMovedCard));
+          
+          // Update source column positions
+          newSourceCards.forEach((card, index) => {
+            if (card.position !== index) {
+              updates.push(cardActions.updateCard(card.id, { ...card, position: index }));
+            }
+          });
+          
+          // Update destination column positions
+          newDestCards.forEach((card, index) => {
+            if (card.position !== index) {
+              updates.push(cardActions.updateCard(card.id, { ...card, position: index }));
+            }
+          });
+          
+          // Execute all updates
+          const allUpdatedCards = await Promise.all(updates);
+          
+          // Batch dispatch
+          allUpdatedCards.forEach(updatedCard => {
+            dispatch({ type: ActionTypes.UPDATE_CARD, payload: updatedCard });
+          });
         }
       } catch (error) {
         console.error('Error moving card:', error);
