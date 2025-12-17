@@ -89,8 +89,12 @@
 
 .board-item.active {
   background: var(--color-primary);
-  color: white;
+  color: var(--color-text-inverse);
   border-color: var(--color-primary);
+}
+
+.board-item.active .board-title {
+  color: var(--color-text-inverse);
 }
 
 .board-icon {
@@ -103,6 +107,9 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-inverse);
+  font-weight: var(--font-weight-medium);
 }
 
 .board-delete-btn {
