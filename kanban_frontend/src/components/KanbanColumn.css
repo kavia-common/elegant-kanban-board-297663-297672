@@ -1,0 +1,208 @@
+.kanban-column {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-12);
+  min-width: 280px;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-sm);
+  height: fit-content;
+  max-height: calc(100vh - 200px);
+}
+
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-8) var(--spacing-12);
+  margin: calc(var(--spacing-12) * -1) calc(var(--spacing-12) * -1) var(--spacing-12);
+  background: var(--gradient-primary);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  color: white;
+}
+
+.column-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-8);
+  flex: 1;
+}
+
+.column-title {
+  margin: 0;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: white;
+}
+
+.column-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--spacing-8);
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.column-actions {
+  display: flex;
+  gap: var(--spacing-4);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.column-header:hover .column-actions {
+  opacity: 1;
+}
+
+.column-action-btn {
+  padding: var(--spacing-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.column-action-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.column-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--spacing-4) 0;
+  min-height: 100px;
+  transition: background-color var(--transition-fast);
+}
+
+.column-content.dragging-over {
+  background: rgba(37, 99, 235, 0.05);
+  border-radius: var(--radius-md);
+}
+
+.column-footer {
+  margin-top: var(--spacing-8);
+  padding-top: var(--spacing-8);
+  border-top: 1px solid var(--color-border);
+}
+
+.add-card-btn {
+  width: 100%;
+  padding: var(--spacing-8);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.add-card-btn:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-primary);
+}
+
+.add-card-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+}
+
+.add-card-input {
+  width: 100%;
+  padding: var(--spacing-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+}
+
+.add-card-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.add-card-actions {
+  display: flex;
+  gap: var(--spacing-8);
+}
+
+.btn-add-card,
+.btn-cancel-card {
+  padding: var(--spacing-8) var(--spacing-16);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-add-card {
+  background: var(--color-primary);
+  color: white;
+  flex: 1;
+}
+
+.btn-add-card:hover {
+  background: #1E40AF;
+}
+
+.btn-cancel-card {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.btn-cancel-card:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Custom scrollbar */
+.column-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.column-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.column-content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.column-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .kanban-column {
+    min-width: 260px;
+    max-width: 280px;
+  }
+  
+  .column-actions {
+    opacity: 1;
+  }
+}

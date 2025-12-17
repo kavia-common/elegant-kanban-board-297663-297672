@@ -54,13 +54,15 @@
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-16);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-16);
 }
 
 .board-list {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-8);
-  margin-bottom: var(--spacing-16);
 }
 
 .board-item {
@@ -77,6 +79,7 @@
   cursor: pointer;
   transition: all var(--transition-base);
   width: 100%;
+  position: relative;
 }
 
 .board-item:hover {
@@ -84,10 +87,10 @@
   border-color: var(--color-border);
 }
 
-.board-item:active,
 .board-item.active {
   background: var(--color-primary);
   color: white;
+  border-color: var(--color-primary);
 }
 
 .board-icon {
@@ -102,6 +105,36 @@
   text-overflow: ellipsis;
 }
 
+.board-delete-btn {
+  padding: var(--spacing-4);
+  border: none;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  border-radius: var(--radius-sm);
+  min-width: 24px;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.board-item:hover .board-delete-btn {
+  opacity: 0.7;
+}
+
+.board-delete-btn:hover {
+  opacity: 1 !important;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.board-item.active .board-delete-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 .add-board-btn {
   width: 100%;
   padding: var(--spacing-12) var(--spacing-16);
@@ -113,6 +146,7 @@
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: all var(--transition-base);
+  margin-top: auto;
 }
 
 .add-board-btn:hover {
@@ -121,10 +155,74 @@
   background: rgba(37, 99, 235, 0.05);
 }
 
+.create-board-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8);
+  margin-top: auto;
+}
+
+.create-board-input {
+  width: 100%;
+  padding: var(--spacing-8) var(--spacing-12);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-family: inherit;
+}
+
+.create-board-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.create-board-actions {
+  display: flex;
+  gap: var(--spacing-8);
+}
+
+.btn-create,
+.btn-cancel {
+  padding: var(--spacing-8) var(--spacing-12);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-create {
+  background: var(--color-primary);
+  color: white;
+  flex: 1;
+}
+
+.btn-create:hover {
+  background: #1E40AF;
+}
+
+.btn-cancel {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+.btn-cancel:hover {
+  background: var(--color-surface-hover);
+}
+
 /* Collapsed state adjustments */
 .app-sidebar.collapsed .board-item {
   justify-content: center;
   padding: var(--spacing-12);
+}
+
+.app-sidebar.collapsed .board-title,
+.app-sidebar.collapsed .board-delete-btn {
+  display: none;
 }
 
 /* Responsive design */
