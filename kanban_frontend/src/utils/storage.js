@@ -1,7 +1,12 @@
-import Dexie from 'dexie';
+/**
+ * Storage utility module - Backward compatibility wrapper
+ * This module provides backward compatibility with the old storage API
+ * while using the new StorageService abstraction under the hood
+ */
+import getStorageService from '../services/storage';
 
-// IndexedDB database instance
-let db = null;
+// Get storage service instance
+const storageService = getStorageService();
 
 // PUBLIC_INTERFACE
 /**
@@ -9,24 +14,7 @@ let db = null;
  * @returns {Promise<boolean>} Success status
  */
 export const initIndexedDB = async () => {
-  try {
-    db = new Dexie('kanban-app-db');
-    
-    db.version(1).stores({
-      boards: 'id, createdAt, starred, archived',
-      columns: 'id, boardId, position',
-      cards: 'id, columnId, position, dueDate, priority',
-      labels: 'id, boardId',
-      settings: 'key'
-    });
-
-    await db.open();
-    console.log('IndexedDB initialized successfully');
-    return true;
-  } catch (err) {
-    console.error('Error initializing IndexedDB:', err);
-    return false;
-  }
+  return await storageService.init();
 };
 
 // PUBLIC_INTERFACE
@@ -37,14 +25,7 @@ export const initIndexedDB = async () => {
  * @returns {Promise<boolean>} Success status
  */
 export const saveToIndexedDB = async (storeName, data) => {
-  try {
-    if (!db) await initIndexedDB();
-    await db[storeName].put(data);
-    return true;
-  } catch (err) {
-    console.error('Error saving to IndexedDB:', err);
-    return false;
-  }
+  return await storageService.save(storeName, data);
 };
 
 // PUBLIC_INTERFACE
@@ -55,13 +36,7 @@ export const saveToIndexedDB = async (storeName, data) => {
  * @returns {Promise<Object|null>} Retrieved data or null
  */
 export const loadFromIndexedDB = async (storeName, key) => {
-  try {
-    if (!db) await initIndexedDB();
-    return await db[storeName].get(key);
-  } catch (err) {
-    console.error('Error loading from IndexedDB:', err);
-    return null;
-  }
+  return await storageService.get(storeName, key);
 };
 
 // PUBLIC_INTERFACE
@@ -72,19 +47,7 @@ export const loadFromIndexedDB = async (storeName, key) => {
  * @returns {Promise<Array>} Array of items
  */
 export const loadAllFromIndexedDB = async (storeName, filter = null) => {
-  try {
-    if (!db) await initIndexedDB();
-    
-    if (filter) {
-      const collection = db[storeName].where(filter);
-      return await collection.toArray();
-    }
-    
-    return await db[storeName].toArray();
-  } catch (err) {
-    console.error('Error loading all from IndexedDB:', err);
-    return [];
-  }
+  return await storageService.getAll(storeName, filter);
 };
 
 // PUBLIC_INTERFACE
@@ -95,14 +58,7 @@ export const loadAllFromIndexedDB = async (storeName, filter = null) => {
  * @returns {Promise<boolean>} Success status
  */
 export const deleteFromIndexedDB = async (storeName, id) => {
-  try {
-    if (!db) await initIndexedDB();
-    await db[storeName].delete(id);
-    return true;
-  } catch (err) {
-    console.error('Error deleting from IndexedDB:', err);
-    return false;
-  }
+  return await storageService.delete(storeName, id);
 };
 
 // PUBLIC_INTERFACE
@@ -113,14 +69,7 @@ export const deleteFromIndexedDB = async (storeName, id) => {
  * @returns {Promise<boolean>} Success status
  */
 export const bulkSaveToIndexedDB = async (storeName, items) => {
-  try {
-    if (!db) await initIndexedDB();
-    await db[storeName].bulkPut(items);
-    return true;
-  } catch (err) {
-    console.error('Error bulk saving to IndexedDB:', err);
-    return false;
-  }
+  return await storageService.bulkSave(storeName, items);
 };
 
 // PUBLIC_INTERFACE
@@ -130,14 +79,7 @@ export const bulkSaveToIndexedDB = async (storeName, items) => {
  * @returns {Promise<boolean>} Success status
  */
 export const clearStoreInIndexedDB = async (storeName) => {
-  try {
-    if (!db) await initIndexedDB();
-    await db[storeName].clear();
-    return true;
-  } catch (err) {
-    console.error('Error clearing store in IndexedDB:', err);
-    return false;
-  }
+  return await storageService.clear(storeName);
 };
 
 // PUBLIC_INTERFACE
@@ -186,3 +128,6 @@ export const clearAppState = () => {
     console.error('Error clearing app state:', err);
   }
 };
+
+// Export the storage service instance for advanced usage
+export { storageService };
