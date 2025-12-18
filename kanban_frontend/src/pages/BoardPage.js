@@ -1,7 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { DragDropContext } from 'react-beautiful-dnd';
-import { useAppState, useAppDispatch, ActionTypes, boardActions, columnActions, cardActions } from '../state/store';
+import useBoardStore from '../stores/boardStore';
+import useColumnStore from '../stores/columnStore';
+import useCardStore from '../stores/cardStore';
+import useUIStore from '../stores/uiStore';
+import { createColumn, updateColumn, deleteColumn } from '../state/columns';
+import { createCard, updateCard, deleteCard } from '../state/cards';
 import useDebounce from '../hooks/useDebounce';
 import KanbanColumn from '../components/KanbanColumn';
 import './BoardPage.css';
@@ -12,20 +17,39 @@ import './BoardPage.css';
  */
 const BoardPage = () => {
   const { id: boardIdFromUrl } = useParams();
-  const navigate = useNavigate();
-  const state = useAppState();
-  const dispatch = useAppDispatch();
+  
+  // Zustand stores
+  const boards = useBoardStore((state) => state.boards);
+  const activeBoard = useBoardStore((state) => state.activeBoard);
+  const setActiveBoard = useBoardStore((state) => state.setActiveBoard);
+  const boardLoading = useBoardStore((state) => state.loading);
+  const boardError = useBoardStore((state) => state.error);
+  
+  const columns = useColumnStore((state) => state.columns);
+  const loadColumns = useColumnStore((state) => state.loadColumns);
+  const addColumn = useColumnStore((state) => state.addColumn);
+  const updateColumnStore = useColumnStore((state) => state.updateColumn);
+  const deleteColumnStore = useColumnStore((state) => state.deleteColumn);
+  const columnLoading = useColumnStore((state) => state.loading);
+  
+  const cards = useCardStore((state) => state.cards);
+  const loadCards = useCardStore((state) => state.loadCards);
+  const addCard = useCardStore((state) => state.addCard);
+  const updateCardStore = useCardStore((state) => state.updateCard);
+  const deleteCardStore = useCardStore((state) => state.deleteCard);
+  const batchUpdateCards = useCardStore((state) => state.batchUpdateCards);
+  
+  const searchQuery = useUIStore((state) => state.searchQuery);
   
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
-  const [editingCard, setEditingCard] = useState(null);
 
-  const activeBoardId = boardIdFromUrl || state.activeBoard;
-  const activeBoard = state.boards.find(b => b.id === activeBoardId);
-  const boardColumns = state.columns.filter(c => c.boardId === activeBoardId);
+  const activeBoardId = boardIdFromUrl || activeBoard;
+  const activeBoardData = boards.find(b => b.id === activeBoardId);
+  const boardColumns = columns.filter(c => c.boardId === activeBoardId);
 
   // Debounce search query
-  const debouncedSearchQuery = useDebounce(state.searchQuery, 300);
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   // Filter cards and columns based on search query
   const { filteredColumns, totalMatches } = useMemo(() => {
@@ -40,7 +64,7 @@ const BoardPage = () => {
     let matchCount = 0;
     
     const filtered = boardColumns.map(column => {
-      const columnCards = state.cards
+      const columnCards = cards
         .filter(c => c.columnId === column.id)
         .sort((a, b) => a.position - b.position);
 
@@ -65,51 +89,43 @@ const BoardPage = () => {
       filteredColumns: filtered,
       totalMatches: matchCount
     };
-  }, [boardColumns, state.cards, debouncedSearchQuery]);
+  }, [boardColumns, cards, debouncedSearchQuery]);
 
   // Load columns and cards when board changes
   useEffect(() => {
     const loadBoardData = async () => {
       if (activeBoardId) {
-        dispatch({ type: ActionTypes.SET_LOADING, payload: true });
         try {
-          const columns = await columnActions.loadColumns(activeBoardId);
-          dispatch({ type: ActionTypes.SET_COLUMNS, payload: columns });
-          
-          // Load cards for all columns
-          const allCards = [];
-          for (const column of columns) {
-            const cards = await cardActions.loadCards(column.id);
-            allCards.push(...cards);
+          await loadColumns(activeBoardId);
+          const columnIds = columns
+            .filter(c => c.boardId === activeBoardId)
+            .map(c => c.id);
+          if (columnIds.length > 0) {
+            await loadCards(columnIds);
           }
-          dispatch({ type: ActionTypes.SET_CARDS, payload: allCards });
         } catch (error) {
           console.error('Error loading board data:', error);
-          dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
-        } finally {
-          dispatch({ type: ActionTypes.SET_LOADING, payload: false });
         }
       }
     };
 
     loadBoardData();
-  }, [activeBoardId, dispatch]);
+  }, [activeBoardId, loadColumns, loadCards, columns]);
 
   const handleAddColumn = async (e) => {
     e.preventDefault();
     if (newColumnTitle.trim() && activeBoardId) {
       try {
-        const newColumn = await columnActions.createColumn({
+        const newColumn = await createColumn({
           boardId: activeBoardId,
           title: newColumnTitle.trim(),
           position: boardColumns.length
         });
-        dispatch({ type: ActionTypes.ADD_COLUMN, payload: newColumn });
+        addColumn(newColumn);
         setNewColumnTitle('');
         setIsAddingColumn(false);
       } catch (error) {
         console.error('Error creating column:', error);
-        dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
       }
     }
   };
@@ -118,14 +134,13 @@ const BoardPage = () => {
     const newTitle = window.prompt('Enter new column title:', column.title);
     if (newTitle && newTitle.trim() && newTitle !== column.title) {
       try {
-        const updatedColumn = await columnActions.updateColumn(column.id, {
+        const updatedColumn = await updateColumn(column.id, {
           ...column,
           title: newTitle.trim()
         });
-        dispatch({ type: ActionTypes.UPDATE_COLUMN, payload: updatedColumn });
+        updateColumnStore(column.id, updatedColumn);
       } catch (error) {
         console.error('Error updating column:', error);
-        dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
       }
     }
   };
@@ -133,33 +148,31 @@ const BoardPage = () => {
   const handleDeleteColumn = async (columnId) => {
     try {
       // Delete all cards in the column
-      const cardsToDelete = state.cards.filter(c => c.columnId === columnId);
+      const cardsToDelete = cards.filter(c => c.columnId === columnId);
       for (const card of cardsToDelete) {
-        await cardActions.deleteCard(card.id);
-        dispatch({ type: ActionTypes.DELETE_CARD, payload: card.id });
+        await deleteCard(card.id);
+        await deleteCardStore(card.id);
       }
       
       // Delete the column
-      await columnActions.deleteColumn(columnId);
-      dispatch({ type: ActionTypes.DELETE_COLUMN, payload: columnId });
+      await deleteColumn(columnId);
+      await deleteColumnStore(columnId);
     } catch (error) {
       console.error('Error deleting column:', error);
-      dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
     }
   };
 
   const handleAddCard = async (columnId, cardData) => {
     try {
-      const columnCards = state.cards.filter(c => c.columnId === columnId);
-      const newCard = await cardActions.createCard({
+      const columnCards = cards.filter(c => c.columnId === columnId);
+      const newCard = await createCard({
         ...cardData,
         columnId,
         position: columnCards.length
       });
-      dispatch({ type: ActionTypes.ADD_CARD, payload: newCard });
+      addCard(newCard);
     } catch (error) {
       console.error('Error creating card:', error);
-      dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
     }
   };
 
@@ -172,25 +185,23 @@ const BoardPage = () => {
 
   const handleUpdateCard = async (cardId, updates) => {
     try {
-      const card = state.cards.find(c => c.id === cardId);
-      const updatedCard = await cardActions.updateCard(cardId, {
+      const card = cards.find(c => c.id === cardId);
+      const updatedCard = await updateCard(cardId, {
         ...card,
         ...updates
       });
-      dispatch({ type: ActionTypes.UPDATE_CARD, payload: updatedCard });
+      updateCardStore(cardId, updatedCard);
     } catch (error) {
       console.error('Error updating card:', error);
-      dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
     }
   };
 
   const handleDeleteCard = async (cardId) => {
     try {
-      await cardActions.deleteCard(cardId);
-      dispatch({ type: ActionTypes.DELETE_CARD, payload: cardId });
+      await deleteCard(cardId);
+      await deleteCardStore(cardId);
     } catch (error) {
       console.error('Error deleting card:', error);
-      dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
     }
   };
 
@@ -215,7 +226,7 @@ const BoardPage = () => {
       try {
         if (sourceColumnId === destColumnId) {
           // Reorder within same column
-          const columnCards = state.cards
+          const columnCards = cards
             .filter(c => c.columnId === sourceColumnId)
             .sort((a, b) => a.position - b.position);
           
@@ -226,25 +237,27 @@ const BoardPage = () => {
           
           // Batch update all card positions
           const updatePromises = columnCards.map((card, index) => 
-            cardActions.updateCard(card.id, {
+            updateCard(card.id, {
               ...card,
               position: index
             })
           );
           
-          const updatedCards = await Promise.all(updatePromises);
+          await Promise.all(updatePromises);
           
-          // Batch dispatch all updates
-          updatedCards.forEach(updatedCard => {
-            dispatch({ type: ActionTypes.UPDATE_CARD, payload: updatedCard });
-          });
+          // Batch update store
+          const cardUpdates = columnCards.map((card, index) => ({
+            id: card.id,
+            updates: { position: index }
+          }));
+          batchUpdateCards(cardUpdates);
         } else {
           // Move to different column
-          const sourceCards = state.cards
+          const sourceCards = cards
             .filter(c => c.columnId === sourceColumnId)
             .sort((a, b) => a.position - b.position);
           
-          const destCards = state.cards
+          const destCards = cards
             .filter(c => c.columnId === destColumnId)
             .sort((a, b) => a.position - b.position);
           
@@ -265,40 +278,43 @@ const BoardPage = () => {
           
           // Prepare all updates
           const updates = [];
+          const storeUpdates = [];
           
           // Update moved card
-          updates.push(cardActions.updateCard(draggableId, updatedMovedCard));
+          updates.push(updateCard(draggableId, updatedMovedCard));
+          storeUpdates.push({ id: draggableId, updates: { columnId: destColumnId, position: destination.index } });
           
           // Update source column positions
           newSourceCards.forEach((card, index) => {
             if (card.position !== index) {
-              updates.push(cardActions.updateCard(card.id, { ...card, position: index }));
+              updates.push(updateCard(card.id, { ...card, position: index }));
+              storeUpdates.push({ id: card.id, updates: { position: index } });
             }
           });
           
           // Update destination column positions
           newDestCards.forEach((card, index) => {
-            if (card.position !== index) {
-              updates.push(cardActions.updateCard(card.id, { ...card, position: index }));
+            if (card.position !== index && card.id !== draggableId) {
+              updates.push(updateCard(card.id, { ...card, position: index }));
+              storeUpdates.push({ id: card.id, updates: { position: index } });
             }
           });
           
           // Execute all updates
-          const allUpdatedCards = await Promise.all(updates);
+          await Promise.all(updates);
           
-          // Batch dispatch
-          allUpdatedCards.forEach(updatedCard => {
-            dispatch({ type: ActionTypes.UPDATE_CARD, payload: updatedCard });
-          });
+          // Batch update store
+          batchUpdateCards(storeUpdates);
         }
       } catch (error) {
         console.error('Error moving card:', error);
-        dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
       }
     }
   };
 
-  if (state.loading) {
+  const loading = boardLoading || columnLoading;
+
+  if (loading) {
     return (
       <div className="board-page board-loading">
         <div className="loading-spinner"></div>
@@ -307,7 +323,7 @@ const BoardPage = () => {
     );
   }
 
-  if (!activeBoardId || !activeBoard) {
+  if (!activeBoardId || !activeBoardData) {
     return (
       <div className="board-page board-empty">
         <div className="empty-state">
@@ -332,9 +348,9 @@ const BoardPage = () => {
   return (
     <div className="board-page">
       <div className="board-header">
-        <h2 className="board-title">{activeBoard.title}</h2>
-        {activeBoard.description && (
-          <p className="board-description">{activeBoard.description}</p>
+        <h2 className="board-title">{activeBoardData.title}</h2>
+        {activeBoardData.description && (
+          <p className="board-description">{activeBoardData.description}</p>
         )}
         
         {/* Search result count with accessibility */}
@@ -375,7 +391,7 @@ const BoardPage = () => {
               .map(column => {
                 const columnCards = isSearchActive
                   ? column.cards || []
-                  : state.cards
+                  : cards
                       .filter(c => c.columnId === column.id)
                       .sort((a, b) => a.position - b.position);
 
@@ -440,10 +456,10 @@ const BoardPage = () => {
         </DragDropContext>
       )}
 
-      {state.error && (
+      {boardError && (
         <div className="error-toast">
-          <span>{state.error}</span>
-          <button onClick={() => dispatch({ type: ActionTypes.SET_ERROR, payload: null })}>
+          <span>{boardError}</span>
+          <button onClick={() => useBoardStore.getState().clearError()}>
             ✕
           </button>
         </div>

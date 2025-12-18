@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import useUIStore from '../stores/uiStore';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import Main from './Main';
@@ -6,28 +8,24 @@ import './AppLayout.css';
 
 // PUBLIC_INTERFACE
 /**
- * AppLayout component composing Header, Sidebar, and Main content area
- * @param {Object} props - Component props
- * @param {Function} props.onThemeToggle - Theme toggle handler
- * @param {boolean} props.isDark - Current theme state
- * @param {React.ReactNode} props.children - Content for main area
+ * AppLayout component providing the main application structure
+ * Contains Header, Sidebar, and Main content area
  */
-const AppLayout = ({ onThemeToggle, isDark, children }) => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  const handleSidebarToggle = () => {
-    setSidebarCollapsed(!sidebarCollapsed);
-  };
+const AppLayout = () => {
+  const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
+  const toggleSidebar = useUIStore((state) => state.toggleSidebar);
 
   return (
     <div className="app-layout">
-      <Header onThemeToggle={onThemeToggle} isDark={isDark} />
+      <Header />
       <div className="app-body">
         <Sidebar 
           collapsed={sidebarCollapsed} 
-          onToggle={handleSidebarToggle}
+          onToggle={toggleSidebar} 
         />
-        <Main>{children}</Main>
+        <Main collapsed={sidebarCollapsed}>
+          <Outlet />
+        </Main>
       </div>
     </div>
   );

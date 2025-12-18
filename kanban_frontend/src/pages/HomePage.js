@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppState, useAppDispatch, ActionTypes, boardActions } from '../state/store';
+import useBoardStore from '../stores/boardStore';
+import useUIStore from '../stores/uiStore';
+import { createBoard } from '../state/boards';
 import useDebounce from '../hooks/useDebounce';
 import HighlightText from '../components/HighlightText';
 import './HomePage.css';
@@ -11,23 +13,29 @@ import './HomePage.css';
  */
 const HomePage = () => {
   const navigate = useNavigate();
-  const state = useAppState();
-  const dispatch = useAppDispatch();
+  
+  // Zustand stores
+  const boards = useBoardStore((state) => state.boards);
+  const addBoard = useBoardStore((state) => state.addBoard);
+  const setActiveBoard = useBoardStore((state) => state.setActiveBoard);
+  const loading = useBoardStore((state) => state.loading);
+  
+  const searchQuery = useUIStore((state) => state.searchQuery);
 
   // Debounce search query
-  const debouncedSearchQuery = useDebounce(state.searchQuery, 300);
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
 
   // Filter boards based on search query
   const { filteredBoards, totalMatches } = useMemo(() => {
     if (!debouncedSearchQuery || debouncedSearchQuery.length < 2) {
       return {
-        filteredBoards: state.boards,
+        filteredBoards: boards,
         totalMatches: 0
       };
     }
 
     const query = debouncedSearchQuery.toLowerCase();
-    const filtered = state.boards.filter(board => {
+    const filtered = boards.filter(board => {
       const titleMatch = board.title?.toLowerCase().includes(query);
       const descMatch = board.description?.toLowerCase().includes(query);
       return titleMatch || descMatch;
@@ -37,29 +45,28 @@ const HomePage = () => {
       filteredBoards: filtered,
       totalMatches: filtered.length
     };
-  }, [state.boards, debouncedSearchQuery]);
+  }, [boards, debouncedSearchQuery]);
 
   const handleCreateFirstBoard = async () => {
     try {
-      const newBoard = await boardActions.createBoard({
+      const newBoard = await createBoard({
         title: 'My First Board',
         description: 'Start organizing your tasks here'
       });
-      dispatch({ type: ActionTypes.ADD_BOARD, payload: newBoard });
-      dispatch({ type: ActionTypes.SET_ACTIVE_BOARD, payload: newBoard.id });
+      addBoard(newBoard);
+      setActiveBoard(newBoard.id);
       navigate(`/board/${newBoard.id}`);
     } catch (error) {
       console.error('Error creating board:', error);
-      dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
     }
   };
 
   const handleSelectBoard = (boardId) => {
-    dispatch({ type: ActionTypes.SET_ACTIVE_BOARD, payload: boardId });
+    setActiveBoard(boardId);
     navigate(`/board/${boardId}`);
   };
 
-  if (state.loading) {
+  if (loading) {
     return (
       <div className="home-page">
         <div className="loading-spinner"></div>
@@ -68,7 +75,7 @@ const HomePage = () => {
     );
   }
 
-  if (state.boards.length === 0) {
+  if (boards.length === 0) {
     return (
       <div className="home-page">
         <div className="empty-state">

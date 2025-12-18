@@ -1,7 +1,8 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AppStateProvider } from './state/store';
-import { useTheme } from './hooks/useTheme';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import useBoardStore from './stores/boardStore';
+import useColumnStore from './stores/columnStore';
+import useCardStore from './stores/cardStore';
 import AppLayout from './components/AppLayout';
 import HomePage from './pages/HomePage';
 import BoardPage from './pages/BoardPage';
@@ -9,22 +10,52 @@ import './App.css';
 
 // PUBLIC_INTERFACE
 /**
- * Root App component with theme and state management
+ * Main App component with routing and store initialization
  */
 function App() {
-  const { toggleTheme, isDark } = useTheme();
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  const initBoard = useBoardStore((state) => state.init);
+  const initColumn = useColumnStore((state) => state.init);
+  const initCard = useCardStore((state) => state.init);
+
+  useEffect(() => {
+    const initializeStores = async () => {
+      try {
+        // Initialize all stores
+        await Promise.all([
+          initBoard(),
+          initColumn(),
+          initCard()
+        ]);
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Error initializing stores:', error);
+        setIsInitialized(true); // Still render the app
+      }
+    };
+
+    initializeStores();
+  }, [initBoard, initColumn, initCard]);
+
+  if (!isInitialized) {
+    return (
+      <div className="app-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading application...</p>
+      </div>
+    );
+  }
 
   return (
-    <BrowserRouter>
-      <AppStateProvider>
-        <AppLayout onThemeToggle={toggleTheme} isDark={isDark}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/board/:id" element={<BoardPage />} />
-          </Routes>
-        </AppLayout>
-      </AppStateProvider>
-    </BrowserRouter>
+    <Router>
+      <Routes>
+        <Route path="/" element={<AppLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="board/:id" element={<BoardPage />} />
+        </Route>
+      </Routes>
+    </Router>
   );
 }
 

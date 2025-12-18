@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAppState, useAppDispatch, ActionTypes, boardActions } from '../state/store';
+import useBoardStore from '../stores/boardStore';
+import { createBoard, deleteBoard as deleteBoardAction, updateBoardEmoji } from '../state/boards';
 import EmojiPicker from './EmojiPicker';
 import './Sidebar.css';
 
@@ -13,8 +14,15 @@ import './Sidebar.css';
  */
 const Sidebar = ({ collapsed = false, onToggle }) => {
   const navigate = useNavigate();
-  const state = useAppState();
-  const dispatch = useAppDispatch();
+  
+  // Zustand stores
+  const boards = useBoardStore((state) => state.boards);
+  const activeBoard = useBoardStore((state) => state.activeBoard);
+  const addBoard = useBoardStore((state) => state.addBoard);
+  const setActiveBoard = useBoardStore((state) => state.setActiveBoard);
+  const deleteBoard = useBoardStore((state) => state.deleteBoard);
+  const updateBoardEmojiStore = useBoardStore((state) => state.updateBoardEmoji);
+  
   const [isCreatingBoard, setIsCreatingBoard] = useState(false);
   const [newBoardTitle, setNewBoardTitle] = useState('');
   const [emojiPickerState, setEmojiPickerState] = useState({
@@ -27,41 +35,39 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
     e.preventDefault();
     if (newBoardTitle.trim()) {
       try {
-        const newBoard = await boardActions.createBoard({
+        const newBoard = await createBoard({
           title: newBoardTitle.trim()
         });
-        dispatch({ type: ActionTypes.ADD_BOARD, payload: newBoard });
-        dispatch({ type: ActionTypes.SET_ACTIVE_BOARD, payload: newBoard.id });
+        addBoard(newBoard);
+        setActiveBoard(newBoard.id);
         setNewBoardTitle('');
         setIsCreatingBoard(false);
         navigate(`/board/${newBoard.id}`);
       } catch (error) {
         console.error('Error creating board:', error);
-        dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
       }
     }
   };
 
   const handleBoardClick = (boardId) => {
-    dispatch({ type: ActionTypes.SET_ACTIVE_BOARD, payload: boardId });
+    setActiveBoard(boardId);
     navigate(`/board/${boardId}`);
   };
 
   const handleDeleteBoard = async (boardId, e) => {
     e.stopPropagation();
-    const board = state.boards.find(b => b.id === boardId);
+    const board = boards.find(b => b.id === boardId);
     if (window.confirm(`Are you sure you want to delete "${board?.title}" board?`)) {
       try {
-        await boardActions.deleteBoard(boardId);
-        dispatch({ type: ActionTypes.DELETE_BOARD, payload: boardId });
+        await deleteBoardAction(boardId);
+        await deleteBoard(boardId);
         
         // Navigate to home if deleting active board
-        if (state.activeBoard === boardId) {
+        if (activeBoard === boardId) {
           navigate('/');
         }
       } catch (error) {
         console.error('Error deleting board:', error);
-        dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
       }
     }
   };
@@ -78,17 +84,10 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
   const handleEmojiSelect = async (emoji) => {
     if (emojiPickerState.boardId) {
       try {
-        await boardActions.updateBoardEmoji(emojiPickerState.boardId, emoji);
-        dispatch({ 
-          type: ActionTypes.UPDATE_BOARD_EMOJI, 
-          payload: { 
-            id: emojiPickerState.boardId, 
-            emoji: emoji 
-          } 
-        });
+        await updateBoardEmoji(emojiPickerState.boardId, emoji);
+        updateBoardEmojiStore(emojiPickerState.boardId, emoji);
       } catch (error) {
         console.error('Error updating board emoji:', error);
-        dispatch({ type: ActionTypes.SET_ERROR, payload: error.message });
       }
     }
   };
@@ -117,10 +116,10 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
       
       <div className="sidebar-content">
         <nav className="board-list" aria-label="Board navigation">
-          {state.boards.map(board => (
+          {boards.map(board => (
             <button
               key={board.id}
-              className={`board-item ${state.activeBoard === board.id ? 'active' : ''}`}
+              className={`board-item ${activeBoard === board.id ? 'active' : ''}`}
               onClick={() => handleBoardClick(board.id)}
               title={board.title}
             >
@@ -195,7 +194,7 @@ const Sidebar = ({ collapsed = false, onToggle }) => {
       {emojiPickerState.isOpen && (
         <EmojiPicker
           currentEmoji={
-            state.boards.find(b => b.id === emojiPickerState.boardId)?.emoji || '📋'
+            boards.find(b => b.id === emojiPickerState.boardId)?.emoji || '📋'
           }
           onEmojiSelect={handleEmojiSelect}
           onClose={closeEmojiPicker}
